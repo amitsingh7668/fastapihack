@@ -1,7 +1,7 @@
 GITLAB_TOKEN = ""
-GITLAB_PROJECT_ID = "71395662"  # e.g., "java"
+GITLAB_PROJECT_ID = ""  # e.g., "java"
 
-# GITLAB_PROJECT_ID = "71395662"  # e.g., "12345678" python
+# GITLAB_PROJECT_ID = ""  # e.g., "12345678" python
 
 GITLAB_API_BASE = f"https://gitlab.com/api/v4/projects/{GITLAB_PROJECT_ID}"
 HEADERS = {"PRIVATE-TOKEN": GITLAB_TOKEN}
@@ -118,10 +118,12 @@ def extract_gradle_dependencies(content):
 
 
 def find_file(files, filename):
+    pomfileslist = []
     for f in files:
         if f["path"].endswith(filename):
-            return f["path"]
-    return None
+            pomfileslist.append(f["path"])
+    return pomfileslist
+
 
 
 def is_test_file(path):
@@ -180,25 +182,32 @@ def main():
 
     # Extract dependency list
     if language == "python":
-        req_path = find_file(files, "requirements.txt")
+        req_paths = find_file(files, "requirements.txt")
+        all_deps = []
         if req_path:
-            content = get_file_content(req_path)
-            if content:
-                repo_model["project_metadata"]["dependencies"] = extract_python_dependencies(content)
+            for req_path in req_paths:
+                content = get_file_content(req_path)
+                if content:
+                    all_deps.extend(extract_python_dependencies(content))
+            repo_model["project_metadata"]["dependencies"] = list(set(all_deps))  # Remove duplicates
 
     elif language == "java":
-        pom_path = find_file(files, "pom.xml")
-        gradle_path = find_file(files, "build.gradle")
+        pom_paths = find_file(files, "pom.xml")
+        gradle_paths = find_file(files, "build.gradle")
 
-        if pom_path:
-            content = get_file_content(pom_path)
-            if content:
-                repo_model["project_metadata"]["dependencies"] = extract_maven_dependencies(content)
-
-        elif gradle_path:
-            content = get_file_content(gradle_path)
-            if content:
-                repo_model["project_metadata"]["dependencies"] = extract_gradle_dependencies(content)
+        all_deps = []
+        if pom_paths:
+            for req_path in pom_paths:
+                content = get_file_content(req_path)
+                if content:
+                    all_deps.extend(extract_maven_dependencies(content))
+            repo_model["project_metadata"]["dependencies"] = list(set(all_deps))  # Remove duplicates
+        elif gradle_paths:
+            for req_path in gradle_paths:
+                content = get_file_content(req_path)
+                if content:
+                    all_deps.extend(extract_gradle_dependencies(content))
+            repo_model["project_metadata"]["dependencies"] = list(set(all_deps))  # Remove duplicates
 
     # Save results
     with open("repo_metadata.json", "w") as f:
