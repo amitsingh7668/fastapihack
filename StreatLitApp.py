@@ -75,74 +75,97 @@ with tab3:
     st.plotly_chart(fig_var, use_container_width=True)
 
 
+
+
 with tab4:
     st.subheader("🔀 File-to-Import Dependency (Sankey)")
 
-    # === Utility to shorten labels for clarity ===
     def shorten(label):
-        return label if len(label) <= 30 else f"{label[:12]}...{label[-12:]}"
+        """Shortens the label if it exceeds 25 characters and removes the .java extension."""
+        if label.endswith(".java"):
+            label = label.replace(".java", "")
+        return label if len(label) <= 25 else f"{label[:10]}...{label[-10:]}"
 
-    # === Top N most used file → import connections ===
+    # Top N connections
     top_n = 20
-    freq_counter = defaultdict(int)
+    dependency_counter = defaultdict(int)
+
+    # Count frequency of each source-target pair
     for s, t in zip(source_indices, target_indices):
-        freq_counter[(s, t)] += 1
+        dependency_counter[(s, t)] += 1
 
-    sorted_links = sorted(freq_counter.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    # Sort and select top N connections
+    sorted_links = sorted(dependency_counter.items(), key=lambda x: x[1], reverse=True)[:top_n]
 
+    # Extract sources, targets, and values for the Sankey diagram
     sankey_source = [src for (src, tgt), _ in sorted_links]
     sankey_target = [tgt for (src, tgt), _ in sorted_links]
     sankey_value = [val for (_, _), val in sorted_links]
 
-    # === Shorten labels for visual clarity ===
+    # Prepare sharp, clean labels
     shortened_labels = [shorten(label) for label in labels]
 
-    # === Create Sankey chart ===
+    # Create Sankey diagram
     fig_sankey = go.Figure(data=[go.Sankey(
+        arrangement='snap',
         node=dict(
             pad=20,
-            thickness=15,
-            line=dict(color="gray", width=0.5),
+            thickness=20,
+            line=dict(color="black", width=1.2),
             label=shortened_labels,
-            color="rgba(0,123,255,0.5)"  # Light blue fill
+            color="rgba(0, 102, 204, 0.85)",  # Richer blue with better contrast
+            hovertemplate='%{label}<extra></extra>',
         ),
         link=dict(
             source=sankey_source,
             target=sankey_target,
             value=sankey_value,
-            color="rgba(44,160,101,0.4)",
-            hovertemplate='🔹 From %{source.label}<br>🔸 To %{target.label}<br>Usage: %{value}<extra></extra>'
+            color="rgba(0, 204, 102, 0.5)",  # Green with better visibility
+            hovertemplate='📂 From %{source.label}<br>📥 To %{target.label}<br>🔁 Usage: %{value}<extra></extra>',
         )
     )])
 
-    # === Styling and layout ===
+    # Update layout of the figure
     fig_sankey.update_layout(
-        title={
-            'text': "🔗 Top 20 File-to-Import Dependencies",
-            'y': 0.95,
-            'x': 0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'
-        },
-        font=dict(size=14, color='black'),
-        margin=dict(l=10, r=10, t=70, b=20),
-        height=700
+        title=dict(
+            text="🔗 Top 20 File-to-Import Dependencies",
+            x=0.5,
+            xanchor='center',
+            font=dict(size=22, color='black')
+        ),
+        font=dict(size=16, color='black', family="Arial"),
+        margin=dict(l=10, r=10, t=90, b=40),
+        height=800,
+        paper_bgcolor='white',
+        plot_bgcolor='white'
     )
 
+    # Display the chart
     st.plotly_chart(fig_sankey, use_container_width=True)
 
 
 
+
+
 with tab5:
+    st.subheader("🍰 Top 20 Library Import Distribution")
+
     # Build import frequency from the same file_data_list
     all_imports = [imp.split(".")[-1] for file in file_data_list for imp in file["imports"]]
     import_freq = pd.Series(all_imports).value_counts().reset_index()
     import_freq.columns = ["Library", "Count"]
 
+    # Take only top 20
+    top_20_imports = import_freq.head(20)
+
+    # Create pie chart
     fig_import_pie = px.pie(
-        import_freq,
+        top_20_imports,
         names="Library",
         values="Count",
-        title="🍰 Library Usage Across Codebase"
+        title="🍰 Top 20 Library Imports (Most Used)"
     )
+
+    # Display chart
     st.plotly_chart(fig_import_pie, use_container_width=True)
+
