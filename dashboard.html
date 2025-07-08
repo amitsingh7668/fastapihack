@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Codebase Metrics Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    /* Reset some defaults */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: #f5f7fa;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      background: #fff;
+      border-radius: 10px;
+      padding: 30px 40px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-weight: 700;
+      font-size: 2.5rem;
+      text-align: center;
+      color: #003f5c;
+      user-select: none;
+    }
+
+    p.repo-id {
+      font-size: 1.1rem;
+      margin: 0 0 30px;
+      color: #555;
+    }
+
+    nav {
+      margin-bottom: 40px;
+      width: 100%;
+      text-align: center;
+    }
+
+    nav button {
+      background: #0077b6;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      margin: 0 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    }
+
+    nav button:hover, nav button:focus {
+      background: #023e8a;
+      outline: none;
+    }
+
+    nav button:active {
+      background: #011f4b;
+    }
+
+    .chart-container {
+      width: 100%;
+      min-height: 450px;
+      max-height: 750px;
+      margin-bottom: 50px;
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      background: #fafafa;
+      padding: 15px;
+    }
+
+    /* Hide all tabs by default except active */
+    .chart-container:not([style*="display: block"]) {
+      display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      nav button {
+        padding: 8px 12px;
+        margin: 4px 6px;
+        font-size: 0.9rem;
+      }
+      .container {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Codebase Metrics Dashboard</h1>
+    <p class="repo-id">Repo ID: <b>{{ repo_id }}</b></p>
+
+    <nav>
+      <button onclick="showTab('lib')">📚 Top Libraries</button>
+      <button onclick="showTab('func')">🔧 Function Stats</button>
+      <button onclick="showTab('var')">📦 Variable Stats</button>
+      <button onclick="showTab('sankey')">🔀 Sankey View</button>
+      <button onclick="showTab('pie')">🍰 Library Pie Chart</button>
+    </nav>
+
+    <div id="lib" class="chart-container"></div>
+    <div id="func" class="chart-container"></div>
+    <div id="var" class="chart-container"></div>
+    <div id="sankey" class="chart-container"></div>
+    <div id="pie" class="chart-container"></div>
+  </div>
+
+  <script>
+    const repoId = "{{ repo_id }}";
+    const tabs = ['lib', 'func', 'var', 'sankey', 'pie'];
+
+    function showTab(tab) {
+      tabs.forEach(t => {
+        const el = document.getElementById(t);
+        if (t === tab) {
+          el.style.display = 'block';
+        } else {
+          el.style.display = 'none';
+        }
+      });
+    }
+
+    async function loadChart(tab, endpoint) {
+      const res = await fetch(`${endpoint}?id=${repoId}`);
+      const figJson = await res.json();
+      const fig = JSON.parse(figJson);
+      Plotly.newPlot(tab, fig.data, fig.layout, {responsive: true});
+    }
+
+    // Load first tab on page load
+    window.onload = () => {
+      showTab('lib');
+      loadChart('lib', '/data/lib-count');
+    };
+
+    // Load other tabs when user clicks button
+    tabs.forEach(tab => {
+      document.querySelector(`button[onclick="showTab('${tab}')"]`).addEventListener('click', () => {
+        if (tab === 'lib') {
+          loadChart('lib', '/data/lib-count');
+        } else if (tab === 'func') {
+          loadChart('func', '/data/func-stats');
+        } else if (tab === 'var') {
+          loadChart('var', '/data/var-stats');
+        } else if (tab === 'sankey') {
+          loadChart('sankey', '/data/sankey');
+        } else if (tab === 'pie') {
+          loadChart('pie', '/data/pie');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
